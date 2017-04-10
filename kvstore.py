@@ -29,6 +29,9 @@ class KVStore:
 
 
 logging.basicConfig(filename='app.log', level=logging.DEBUG)
+logging.info('=============================')
+logging.info('==== Distributed KVStore ====')
+logging.info('=============================')
 
 with open('nodeslist.txt', 'r') as f:
     nodes = [line.split() for line in f.readlines()]
