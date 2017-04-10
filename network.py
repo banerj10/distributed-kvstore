@@ -6,6 +6,7 @@ import socket
 from messages import *
 from storage import Store
 
+
 class AsyncNetwork:
     PORT = 13337
     OWN_ID = -1
@@ -26,16 +27,16 @@ class AsyncNetwork:
         self.evloop = evloop
         self.server = None
 
-        for node, id in nodeslist:
-            id = int(id)
+        for node, nodeid in nodeslist:
+            nodeid = int(nodeid)
             ip = socket.gethostbyname(node)
-            AsyncNetwork.ids[id] = ip
-            AsyncNetwork.ips[ip] = id
+            AsyncNetwork.ids[nodeid] = ip
+            AsyncNetwork.ips[ip] = nodeid
 
             if node != socket.gethostname(): # don't add self
                 AsyncNetwork.nodes[ip] = None
             else:
-                AsyncNetwork.OWN_ID = id
+                AsyncNetwork.OWN_ID = nodeid
                 AsyncNetwork.OWN_IP = ip
 
         logging.info(f'IDS: {AsyncNetwork.ids}')
@@ -166,11 +167,28 @@ class AsyncNetwork:
         response = msg
         AsyncNetwork.requests[orig_uid] = event, response
 
-    def handle_GetOwners(self, msg):
-        pass
+    def handle_GetOwners(self, msg, ret=False):
+        value = Store.hash_table.get(msg.key, None)
+        if value is None:
+            for repdicts in Store.replicas.values():
+                value = repdicts.get(msg.key, None)
+                if value is not None:
+                    break
+        respondmsg = GetOwnersResponse(msg.uid, msg.key, (value is not None))
+
+        if ret:
+            return (value is not None)
+        if msg.origin:
+            self.evloop.create_task(
+                AsyncNetwork.nodes[msg.origin].send(respondmsg)
+            )
 
     def handle_GetOwnersResponse(self, msg):
-        pass
+        orig_uid = msg.orig_uid
+        event, _ = AsyncNetwork.requests[orig_uid]
+        event.set()
+        response = msg
+        AsyncNetwork.requests[orig_uid] = event, response
 
     def handle_ReplicationMsg(self, msg):
         orig_id = AsyncNetwork.ips[msg.origin]

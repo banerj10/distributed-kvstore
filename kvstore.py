@@ -129,7 +129,7 @@ class KVStore:
         msg = GetMsg(key)
 
         for tryid in try_ids:
-            logging.info(f'Trying to GetMsg from ID: {tryid}')
+            logging.info(f'Trying to GetMsg from ID: {tryid+1}')
             if tryid == AsyncNetwork.OWN_ID:
                 # get key from self
                 value = self.network.handle_GetMsg(msg, ret=True)
@@ -217,7 +217,41 @@ class KVStore:
             if AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is not None:
                 break
             pred_id = 9 if pred_id == 0 else (pred_id - 1)
-        self.ui.output(f'{curr_id + 1:02d} {succ_id + 1:02d} {pred_id + 1:02d}')
+
+        try_ids = [curr_id, succ_id, pred_id]
+        msg = GetOwners(key)
+        owners = []
+
+        for tryid in try_ids:
+            logging.info(f'Trying to GetOwners from ID: {tryid+1}')
+            if tryid == AsyncNetwork.OWN_ID:
+                # get key from self
+                is_owner = self.network.handle_GetOwners(msg, ret=True)
+                if is_owner:
+                    owners.append(tryid)
+            else:
+                dest = AsyncNetwork.nodes[AsyncNetwork.ids[tryid]]
+                if dest is None: # succ or pred is not alive
+                    continue
+                event = asyncio.Event()
+                AsyncNetwork.requests[msg.uid] = (event, None)
+
+                try:
+                    await asyncio.wait_for(dest.send(msg), 2, loop=self.evloop)
+                    await asyncio.wait_for(event.wait(), 3, loop=self.evloop)
+                except asyncio.TimeoutError:
+                    logging.error('Failed to send GetOwners!')
+                else:
+                    is_owner = AsyncNetwork.requests[msg.uid][1].is_owner
+                    if is_owner:
+                        owners.append(tryid)
+                        del AsyncNetwork.requests[msg.uid]
+                finally:
+                    if msg.uid in AsyncNetwork.requests:
+                        del AsyncNetwork.requests[msg.uid]
+
+        outstr = ['{:02d}'.format(owner + 1) for owner in owners]
+        self.ui.output(' '.join(outstr))
 
     async def cmd_list_local(self, data):
         if len(data) != 0:
@@ -260,7 +294,7 @@ with open('nodeslist.txt', 'r') as f:
     nodes = [line.split() for line in f.readlines()]
 
 evloop = asyncio.get_event_loop()
-evloop.set_debug(True)
+evloop.set_debug(False)
 kvstore = KVStore(evloop, nodes)
 main_task = evloop.create_task(kvstore.main())
 

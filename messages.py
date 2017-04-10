@@ -49,7 +49,8 @@ class GetOwners(BaseMsg):
 
 
 class GetOwnersResponse(BaseMsg):
-    def __init__(self, key, owner_id, *args, **kwargs):
+    def __init__(self, orig_uid, key, is_owner, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.orig_uid = orig_uid
         self.key = key
-        self.owner_id = owner_id
+        self.is_owner = is_owner
