@@ -129,19 +129,16 @@ class AsyncNetwork:
 
         # respond only if msg has an origin
         if msg.origin:
-            asyncio.ensure_future(
-                AsyncNetwork.nodes[msg.origin].send(respondmsg),
-                loop=self.evloop
+            self.evloop.create_task(
+                AsyncNetwork.nodes[msg.origin].send(respondmsg)
             )
         # send replicas
         replicamsg = ReplicationMsg({msg.key: msg.value})
-        asyncio.ensure_future(
-            AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]].send(replicamsg),
-            loop=self.evloop
+        self.evloop.create_task(
+            AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]].send(replicamsg)
         )
-        asyncio.ensure_future(
-            AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]].send(replicamsg),
-            loop=self.evloop
+        self.evloop.create_task(
+            AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]].send(replicamsg)
         )
 
     def handle_SetMsgResponse(self, msg):
@@ -188,7 +185,7 @@ class Peer:
         self.protocol = protocol
         self.msgqueue = asyncio.Queue()
 
-        asyncio.ensure_future(self.start(), loop=self.evloop)
+        self.evloop.create_task(self.start())
 
     async def start(self):
         while not self.transport.is_closing():
