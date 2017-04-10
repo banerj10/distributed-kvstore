@@ -87,14 +87,9 @@ class Peer:
     async def start(self):
         while not self.transport.is_closing():
             msg = await self.msgqueue.get()
-            destination = msg.destination
-            if not destination:
+            if not msg.destination:
                 logging.error('!!!!! NO DESTINATION !!!!!')
                 continue
-            # switch destination and origin for the receiver's perspective
-            temp = msg.destination
-            msg.destination = msg.origin
-            msg.origin = temp
             pickled = pickle.dumps(msg, pickle.HIGHEST_PROTOCOL)
             self.transport.write(pickled)
 
