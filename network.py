@@ -74,7 +74,7 @@ class AsyncNetwork:
         AsyncNetwork.requests[orig_uid] = event, response
 
     def handle_GetMsg(self, msg):
-        value = Store.hash_table[msg.key]
+        value = Store.hash_table.get(msg.key, None)
         respondmsg = GetMsgResponse(msg.uid, value)
         asyncio.ensure_future(
             AsyncNetwork.nodes[msg.origin].send(respondmsg), loop=self.evloop)
