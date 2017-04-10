@@ -24,6 +24,7 @@ class AsyncNetwork:
         self.server = None
 
         for node, id in nodeslist:
+            id = int(id)
             ip = socket.gethostbyname(node)
             AsyncNetwork.ids[id] = ip
 
