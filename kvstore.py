@@ -39,7 +39,6 @@ class KVStore:
             self.ui.output('\nBYE!')
 
     async def cmd_set(self, data):
-        data = data.split()
         if len(data) != 2:
             self.ui.output(f'Invalid: SET <key> <value>')
             return
