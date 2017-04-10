@@ -3,13 +3,17 @@ import logging
 import pickle
 import socket
 
-from messages import TextMsg
+from messages import *
+from storage import Store
 
 class AsyncNetwork:
     PORT = 13337
 
     # ip_addr -> Peer (has transport and protocol objs inside)
     nodes = {}
+
+    # uuid4 -> Event
+    requests = {}
 
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
@@ -47,10 +51,26 @@ class AsyncNetwork:
             AsyncNetwork.nodes[nodeip] = Peer(self.evloop, transport, proto)
 
     def request_handler(self, msg):
-        if isinstance(msg, TextMsg):
-            logging.info(f'Got: {msg.msg}')
-        else:
+        cls = msg.__class__.__name__
+        handler = getattr(self, f'handle_{cls}', None)
+
+        if handler is None:
             logging.info('Dont recognize this msg')
+        else:
+            logging.info(f'Got {cls}')
+            handler(msg)
+
+    def handle_SetMsg(self, msg):
+        Store.hash_table[msg.key] = msg.value
+        respondto = msg.destination
+        respondmsg = SetMsgResponse(msg.uid)
+        asyncio.ensure_future(
+            AsyncNetwork.nodes[respondto].send(respondmsg), loop=self.evloop)
+
+    def handle_SetMsgResponse(self, msg):
+        orig_uid = msg.orig_uid
+        AsyncNetwork.requests[orig_uid].set()
+        del AsyncNetwork.requests[orig_uid]
 
     def close(self):
         self.server.close()

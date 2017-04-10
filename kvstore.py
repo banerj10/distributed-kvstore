@@ -1,17 +1,19 @@
 import asyncio
 import logging
+import socket
 
 from ui import UI
 from network import AsyncNetwork
-from messages import TextMsg
+from messages import *
 
 class KVStore:
+    NODEID = int(socket.gethostname().split('.')[0][-2:]) - 1
+
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
 
         self.ui = UI(self.evloop)
         self.network = AsyncNetwork(self.evloop, nodeslist)
-
 
     async def main(self):
         await self.network.create_server()
@@ -37,14 +39,28 @@ class KVStore:
             self.ui.output('\nBYE!')
 
     async def cmd_set(self, data):
-        self.ui.output(f'Will SET on {data}')
+        data = data.split()
+        if len(data) != 2:
+            self.ui.output(f'Invalid: SET <key> <value>')
+            return
+
+        key = data[0]
+        value = data[1]
+        self.ui.output(f'Will SET {key} = {value}')
+
+        sendlist = []
         waitlist = []
         for node, peer in AsyncNetwork.nodes.items():
             if peer is not None:
-                waitlist.append(peer.send(TextMsg(data)))
+                msg = SetMsg(key, value)
+                event = asyncio.Event()
 
-        await asyncio.wait(waitlist, loop=self.evloop)
-        self.ui.output('Sent!')
+                sendlist.append(peer.send(msg))
+                AsyncNetwork.requests[msg.uid] = event
+                waitlist.append(event.wait())
+
+        await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
+        await asyncio.wait(waitlist, loop=self.evloop, timeout=3)
 
     async def cmd_connected(self, data):
         connected = [ip for ip, peer in AsyncNetwork.nodes.items() if peer != None]
