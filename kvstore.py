@@ -111,12 +111,18 @@ class KVStore:
         succ_id = (curr_id + 1) % 10
         pred_id = 9 if curr_id == 0 else (curr_id - 1)
         # get successor ID
-        while (succ_id != AsyncNetwork.OWN_ID or
-                       AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is None):
+        while True:
+            if succ_id == AsyncNetwork.OWN_ID:
+                break
+            if AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is not None:
+                break
             succ_id = (succ_id + 1) % 10
         # get predecessor ID
-        while (pred_id != AsyncNetwork.OWN_ID or
-                       AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is None):
+        while True:
+            if pred_id == AsyncNetwork.OWN_ID:
+                break
+            if AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is not None:
+                break
             pred_id = 9 if pred_id == 0 else (pred_id - 1)
 
         try_ids = [curr_id, succ_id, pred_id]
