@@ -2,6 +2,8 @@ import asyncio
 import logging
 import sys
 
+from network import AsyncNetwork
+
 
 class UI:
     def __init__(self, evloop, log_level=logging.DEBUG):
@@ -15,7 +17,10 @@ class UI:
             self.queue.put(sys.stdin.readline()), loop=self.evloop
         )
 
-    async def input(self, prompt='>>> '):
+    async def input(self, prompt=None):
+        if prompt is None:
+            nodeid = AsyncNetwork.OWN_ID + 1
+            prompt = f'NODE {nodeid:02d} >>> '
         print(prompt, end='', flush=True)
         inp = await self.queue.get()
         return inp.strip()

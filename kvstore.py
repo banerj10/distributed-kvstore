@@ -11,8 +11,13 @@ class KVStore:
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
 
-        self.ui = UI(self.evloop)
         self.network = AsyncNetwork(self.evloop, nodeslist)
+        self.ui = UI(self.evloop)
+        self.ui.output('=============================')
+        self.ui.output('==== Distributed KVStore ====')
+        self.ui.output('=============================')
+        self.ui.output(f'Node ID: {AsyncNetwork.OWN_ID}')
+        self.ui.output(f'Node IP ADDR: {AsyncNetwork.OWN_IP}')
 
     async def main(self):
         await self.network.create_server()
