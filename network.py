@@ -25,10 +25,14 @@ class AsyncNetwork:
                 # don't connect to self or someone already connected to
                 continue
 
-            transport, proto = await self.evloop.create_connection(
-                lambda: TCPProtocol(self.evloop), host=node, port=int(port),
-                family=socket.AF_INET
-            )
+            logging.info(f'Trying connect to {node}')
+            try:
+                transport, proto = await self.evloop.create_connection(
+                    lambda: TCPProtocol(self.evloop), host=node, port=int(port),
+                    family=socket.AF_INET
+                )
+            except ConnectionRefusedError:
+                logging.warning(f'Could not connect to {node}')
 
 
     def close(self):
