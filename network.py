@@ -33,15 +33,17 @@ class AsyncNetwork:
                 )
             except ConnectionRefusedError:
                 logging.warning(f'Could not connect to {node}')
+            else:
+                found = False
+                for _, t in AsyncNetwork.nodes:
+                    if t == transport:
+                        found = True
+                        break
+                logging.info(f'Transport found: {found}')
 
 
     def close(self):
         self.server.close()
-
-
-class Node:
-    def __init__(self):
-        pass
 
 
 class TCPProtocol(asyncio.Protocol):
