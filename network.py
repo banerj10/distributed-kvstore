@@ -91,7 +91,7 @@ class TCPProtocol(asyncio.Protocol):
         self.peer = self.transport.get_extra_info('peername')[0]
         logging.info(f'Got connection from {str(self.peer)}')
 
-        AsyncNetwork.nodes[self.peer] = (self.transport, self)
+        AsyncNetwork.nodes[self.peer] = Peer(self.evloop, self.transport, self)
 
     def connection_lost(self, exc):
         logging.info(f'Connection lost with {str(self.peer)}')
