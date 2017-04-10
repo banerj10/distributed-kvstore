@@ -8,6 +8,7 @@ from storage import Store
 
 class AsyncNetwork:
     PORT = 13337
+    OWN_ID = -1
 
     # ip_addr -> Peer (has transport and protocol objs inside)
     nodes = {}
@@ -15,14 +16,44 @@ class AsyncNetwork:
     # uuid4 -> (Event, Response msg)
     requests = {}
 
+    # id -> ip_addr
+    ids = {}
+
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
         self.server = None
 
-        for node, _ in nodeslist:
+        for node, id in nodeslist:
+            ip = socket.gethostbyname(node)
+            AsyncNetwork.ids[id] = ip
+
             if node != socket.gethostname(): # don't add self
-                ip = socket.gethostbyname(node)
                 AsyncNetwork.nodes[ip] = None
+            else:
+                AsyncNetwork.OWN_ID = id
+
+    @staticmethod
+    def placement(key):
+        """
+        Places the given key in the cluster
+        :param key: 
+        :return: the Peer object of the node to place this key in, or
+                 None if the key should be stored in self
+        """
+        if isinstance(key, str):
+            key = Store.hash(key)
+
+        orig = key
+        if key == AsyncNetwork.OWN_ID:
+            return None
+
+        while AsyncNetwork.nodes[AsyncNetwork.ids[key]] is None:
+            key += 1
+            key = key % 10
+            if key == orig:
+                return None
+
+        return AsyncNetwork.nodes[AsyncNetwork.ids[key]]
 
     async def create_server(self):
         self.server = await self.evloop.create_server(
@@ -63,6 +94,7 @@ class AsyncNetwork:
     def handle_SetMsg(self, msg):
         Store.hash_table[msg.key] = msg.value
         respondmsg = SetMsgResponse(msg.uid)
+        # TODO: don't do anything if no msg.origin
         asyncio.ensure_future(
             AsyncNetwork.nodes[msg.origin].send(respondmsg), loop=self.evloop)
 
@@ -131,7 +163,7 @@ class TCPProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         logging.info(f'Connection lost with {str(self.peer)}')
-        del AsyncNetwork.nodes[self.peer]
+        AsyncNetwork.nodes[self.peer] = None
 
         super().connection_lost(exc)
 

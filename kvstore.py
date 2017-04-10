@@ -3,13 +3,12 @@ from concurrent import futures
 import logging
 import socket
 
-from ui import UI
-from network import AsyncNetwork
 from messages import *
+from network import AsyncNetwork
+from storage import Store
+from ui import UI
 
 class KVStore:
-    NODEID = int(socket.gethostname().split('.')[0][-2:]) - 1
-
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
 
@@ -47,30 +46,55 @@ class KVStore:
         key = data[0]
         value = ' '.join(data[1:])
 
-        sendlist = []
-        reqlist = []
-        for node, peer in AsyncNetwork.nodes.items():
-            if peer is not None:
-                msg = SetMsg(key, value)
-                event = asyncio.Event()
+        hashed_key = Store.hash(key)
+        logging.info(f'Key {key} hashed to {hashed_key}')
+        dest = AsyncNetwork.placement(hashed_key)
+        msg = SetMsg(key, value)
 
-                sendlist.append(peer.send(msg))
-                AsyncNetwork.requests[msg.uid] = (event, None)
-                reqlist.append(msg.uid)
-
-        await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
-        done, pending = await asyncio.wait(
-            [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
-            loop=self.evloop, timeout=3
-        )
-
-        if len(done) >= 1:
-            self.ui.output('SET OK')
+        if dest is None:
+            logging.info('Storing in self!')
+            self.network.handle_SetMsg(msg)
         else:
-            self.ui.output('SET FAILED')
-        # clean up the requests
-        for uid in reqlist:
-            del AsyncNetwork.requests[uid]
+            # dest is a Peer object
+            event = asyncio.Event()
+            AsyncNetwork.requests[msg.uid] = (event, None)
+
+            try:
+                await asyncio.wait_for(dest.send(msg), 2, loop=self.evloop)
+                await asyncio.wait_for(event.wait(), 3, loop=self.evloop)
+            except asyncio.TimeoutError:
+                # TODO: try sending to another peer
+                logging.error('Failed to send SetMsg!')
+                self.ui.output('SET FAILED')
+            else:
+                self.ui.output('SET OK')
+            finally:
+                del AsyncNetwork.requests[msg.uid]
+
+        # sendlist = []
+        # reqlist = []
+        # for node, peer in AsyncNetwork.nodes.items():
+        #     if peer is not None:
+        #         msg = SetMsg(key, value)
+        #         event = asyncio.Event()
+        #
+        #         sendlist.append(peer.send(msg))
+        #         AsyncNetwork.requests[msg.uid] = (event, None)
+        #         reqlist.append(msg.uid)
+        #
+        # await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
+        # done, pending = await asyncio.wait(
+        #     [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
+        #     loop=self.evloop, timeout=3
+        # )
+        #
+        # if len(done) >= 1:
+        #     self.ui.output('SET OK')
+        # else:
+        #     self.ui.output('SET FAILED')
+        # # clean up the requests
+        # for uid in reqlist:
+        #     del AsyncNetwork.requests[uid]
 
     async def cmd_get(self, data):
         if len(data) != 1:
