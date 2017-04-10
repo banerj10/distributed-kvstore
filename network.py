@@ -9,15 +9,18 @@ from storage import Store
 class AsyncNetwork:
     PORT = 13337
     OWN_ID = -1
+    OWN_IP = ''
 
     # ip_addr -> Peer (has transport and protocol objs inside)
-    nodes = {}
+    nodes = dict()
 
     # uuid4 -> (Event, Response msg)
-    requests = {}
+    requests = dict()
 
     # id -> ip_addr
-    ids = {}
+    ids = dict()
+    # ip_addr -> id
+    ips = dict()
 
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
@@ -27,16 +30,18 @@ class AsyncNetwork:
             id = int(id)
             ip = socket.gethostbyname(node)
             AsyncNetwork.ids[id] = ip
+            AsyncNetwork.ips[ip] = id
 
             if node != socket.gethostname(): # don't add self
                 AsyncNetwork.nodes[ip] = None
             else:
                 AsyncNetwork.OWN_ID = id
+                AsyncNetwork.OWN_IP = ip
 
         logging.info(f'IDS: {AsyncNetwork.ids}')
 
     @staticmethod
-    def placement(key, return_id=False):
+    def placement(key, reverse=False, return_id=False):
         """
         Places the given key in the cluster and returns placement
         """
@@ -51,8 +56,14 @@ class AsyncNetwork:
                 return None
 
         while AsyncNetwork.nodes[AsyncNetwork.ids[key]] is None:
-            key += 1
-            key = key % 10
+            if reverse:
+                key -= 1
+                if key < 0:
+                    key = 9
+            else:
+                key += 1
+                key = key % 10
+
             if key == orig or key == AsyncNetwork.OWN_ID:
                 if return_id:
                     return AsyncNetwork.OWN_ID
@@ -104,12 +115,34 @@ class AsyncNetwork:
         Store.hash_table[msg.key] = msg.value
         respondmsg = SetMsgResponse(msg.uid)
 
+        # send replication msgs to others
+        curr_id = AsyncNetwork.ips[msg.origin]
+        succ_id = (curr_id + 1) % 10
+        pred_id = 9 if curr_id == 0 else (curr_id - 1)
+        # TODO: expects succ_ip and pred_ip to exist in the Nodes dict
+        # get successor ID
+        while AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is None:
+            succ_id = (succ_id + 1) % 10
+        # get predecessor ID
+        while AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is None:
+            pred_id = 9 if pred_id == 0 else (pred_id - 1)
+
         # respond only if msg has an origin
         if msg.origin:
             asyncio.ensure_future(
                 AsyncNetwork.nodes[msg.origin].send(respondmsg),
                 loop=self.evloop
             )
+        # send replicas
+        replicamsg = ReplicationMsg({msg.key: msg.value})
+        asyncio.ensure_future(
+            AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]].send(replicamsg),
+            loop=self.evloop
+        )
+        asyncio.ensure_future(
+            AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]].send(replicamsg),
+            loop=self.evloop
+        )
 
     def handle_SetMsgResponse(self, msg):
         orig_uid = msg.orig_uid
@@ -130,6 +163,19 @@ class AsyncNetwork:
         event.set()
         response = msg
         AsyncNetwork.requests[orig_uid] = event, response
+
+    def handle_GetOwners(self, msg):
+        pass
+
+    def handle_GetOwnersResponse(self, msg):
+        pass
+
+    def handle_ReplicationMsg(self, msg):
+        orig_id = AsyncNetwork.ips[msg.origin]
+
+        if orig_id not in Store.replicas:
+            Store.replicas[orig_id] = dict()
+        Store.replicas[orig_id].update(msg.data)
 
     def close(self):
         self.server.close()

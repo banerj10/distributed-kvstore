@@ -10,10 +10,10 @@ class BaseMsg:
         return self.__class__.__name__
 
 
-class TextMsg(BaseMsg):
-    def __init__(self, msg, *args, **kwargs):
+class ReplicationMsg(BaseMsg):
+    def __init__(self, data, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.msg = msg
+        self.data = data
 
 
 class SetMsg(BaseMsg):
@@ -40,3 +40,16 @@ class GetMsgResponse(BaseMsg):
         super().__init__(*args, **kwargs)
         self.orig_uid = orig_uid
         self.value = value
+
+
+class GetOwners(BaseMsg):
+    def __init__(self, key, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.key = key
+
+
+class GetOwnersResponse(BaseMsg):
+    def __init__(self, key, owner_id, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.key = key
+        self.owner_id = owner_id
