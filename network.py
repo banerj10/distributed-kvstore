@@ -53,7 +53,7 @@ class AsyncNetwork:
         while AsyncNetwork.nodes[AsyncNetwork.ids[key]] is None:
             key += 1
             key = key % 10
-            if key == orig:
+            if key == orig or key == AsyncNetwork.OWN_ID:
                 return None
 
         return AsyncNetwork.nodes[AsyncNetwork.ids[key]]
