@@ -18,6 +18,19 @@ class AsyncNetwork:
         )
         logging.info('Created server...')
 
+    async def try_connect_to_remaining(self):
+        for node, port in self.nodeslist:
+            if (node == socket.gethostname() or
+                    socket.gethostbyname(node) in AsyncNetwork.nodes):
+                # don't connect to self or someone already connected to
+                continue
+
+            transport, proto = await self.evloop.create_connection(
+                lambda: TCPProtocol(self.evloop), host=node, port=int(port),
+                family=socket.AF_INET
+            )
+
+
     def close(self):
         self.server.close()
 
@@ -41,7 +54,7 @@ class TCPProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         logging.info('Connection lost with {}'.format(str(self.peer)))
-        del AsyncNetwork[self.peer]
+        del AsyncNetwork.nodes[self.peer]
 
         super().connection_lost(exc)
 

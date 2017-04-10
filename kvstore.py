@@ -14,7 +14,7 @@ class KVStore:
 
     async def main(self):
         await self.network.create_server()
-        # await self.
+        await self.network.try_connect_to_remaining()
 
         try:
             while True:
@@ -22,7 +22,7 @@ class KVStore:
                 self.ui.output('Got: ' + command)
 
                 if command == 'connected':
-                    self.ui.output(' '.join(AsyncNetwork.nodes.keys()))
+                    self.ui.output('\n'.join(AsyncNetwork.nodes.keys()))
 
         except asyncio.CancelledError:
             self.network.close()
