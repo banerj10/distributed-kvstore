@@ -53,7 +53,7 @@ with open('nodeslist.txt', 'r') as f:
     nodes = [line.split() for line in f.readlines()]
 
 evloop = asyncio.get_event_loop()
-evloop.set_debug(False)
+evloop.set_debug(True)
 kvstore = KVStore(evloop, nodes)
 main_task = evloop.create_task(kvstore.main())
 
@@ -62,7 +62,7 @@ try:
 except KeyboardInterrupt:
     # main_task.cancel()
     evloop.stop()
-    pending = asyncio.Task.all_tasks()
+    pending = asyncio.Task.all_tasks(loop=evloop)
     for task in pending:
         task.cancel()
     # evloop.run_until_complete(main_task)
