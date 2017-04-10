@@ -132,7 +132,7 @@ class KVStore:
             logging.info(f'Trying to GetMsg from ID: {tryid}')
             if tryid == AsyncNetwork.OWN_ID:
                 # get key from self
-                value = self.network.handle_GetMsg(msg)
+                value = self.network.handle_GetMsg(msg, ret=True)
                 if value is not None:
                     self.ui.output(f'Found: {value}')
                     return

@@ -148,16 +148,16 @@ class AsyncNetwork:
         response = msg
         AsyncNetwork.requests[orig_uid] = event, response
 
-    def handle_GetMsg(self, msg):
+    def handle_GetMsg(self, msg, ret=False):
         value = Store.hash_table.get(msg.key, None)
         respondmsg = GetMsgResponse(msg.uid, value)
 
+        if ret:
+            return value
         if msg.origin:
             self.evloop.create_task(
                 AsyncNetwork.nodes[msg.origin].send(respondmsg)
             )
-        else:
-            return value
 
     def handle_GetMsgResponse(self, msg):
         orig_uid = msg.orig_uid
