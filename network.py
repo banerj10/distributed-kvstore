@@ -35,7 +35,7 @@ class AsyncNetwork:
                 logging.warning(f'Could not connect to {node}')
             else:
                 found = False
-                for _, t in AsyncNetwork.nodes:
+                for _, t in AsyncNetwork.nodes.items():
                     if t == transport:
                         found = True
                         break
