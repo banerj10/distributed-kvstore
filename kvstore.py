@@ -14,19 +14,33 @@ class KVStore:
 
     async def main(self):
         await self.network.create_server()
-        await self.network.try_connect_to_remaining()
+        await self.network.connect_to_peers()
 
         try:
             while True:
                 command = await self.ui.input()
-                self.ui.output('Got: ' + command)
+                if command == '':
+                    continue
 
-                if command == 'connected':
-                    self.ui.output('\n'.join(AsyncNetwork.nodes.keys()))
+                cmd = command.split()[0]
+                data = command.split()[1:]
+
+                cmd_handler = getattr(self, f'cmd_{cmd.lower()}', None)
+                if cmd_handler is None:
+                    self.ui.output(f'Unknown command "{cmd}"...')
+                else:
+                    await cmd_handler(data)
 
         except asyncio.CancelledError:
             self.network.close()
             self.ui.output('\nBYE!')
+
+    async def cmd_set(self, data):
+        self.ui.output(f'Will SET on {data}')
+
+    async def cmd_connected(self, data):
+        connected = [ip for ip, peer in AsyncNetwork.nodes.items() if peer != None]
+        self.ui.output('\n'.join(connected))
 
 
 logging.basicConfig(filename='app.log', level=logging.DEBUG)
