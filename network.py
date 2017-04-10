@@ -16,8 +16,8 @@ class AsyncNetwork:
         # proto = TCPProtocol(self.evloop)
 
         self.server = await self.evloop.create_server(
-            TCPProtocol, port=AsyncNetwork.PORT, family=socket.AF_INET,
-            reuse_address=True, reuse_port=True
+            lambda: TCPProtocol(self.evloop), port=AsyncNetwork.PORT,
+            family=socket.AF_INET, reuse_address=True, reuse_port=True
         )
         logging.info('Created server...')
 
