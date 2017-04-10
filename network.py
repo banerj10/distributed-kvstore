@@ -13,10 +13,10 @@ class AsyncNetwork:
         self.alive = {}
 
     async def create_server(self):
-        proto = TCPProtocol(self.evloop)
+        # proto = TCPProtocol(self.evloop)
 
         self.server = await self.evloop.create_server(
-            proto, port=AsyncNetwork.PORT, family=socket.AF_INET,
+            TCPProtocol, port=AsyncNetwork.PORT, family=socket.AF_INET,
             reuse_address=True, reuse_port=True
         )
         logging.info('Created server...')
@@ -34,8 +34,8 @@ class TCPProtocol(asyncio.Protocol):
         self.evloop = evloop
         logging.info('Created protocol!')
 
-    def __call__(self):
-        return self
+    # def __call__(self):
+    #     return self
 
     def connection_made(self, transport):
         self.transport = transport
