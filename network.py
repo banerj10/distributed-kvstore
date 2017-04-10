@@ -116,7 +116,7 @@ class AsyncNetwork:
         respondmsg = SetMsgResponse(msg.uid)
 
         # send replication msgs to others
-        curr_id = AsyncNetwork.ips[msg.origin]
+        curr_id = AsyncNetwork.OWN_ID
         succ_id = (curr_id + 1) % 10
         pred_id = 9 if curr_id == 0 else (curr_id - 1)
         # TODO: expects succ_ip and pred_ip to exist in the Nodes dict
