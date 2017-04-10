@@ -55,7 +55,7 @@ class AsyncNetwork:
         handler = getattr(self, f'handle_{cls}', None)
 
         if handler is None:
-            logging.info('Dont recognize this msg')
+            logging.warning(f'Dont recognize msg {cls}')
         else:
             logging.info(f'Got {cls}')
             handler(msg)
@@ -111,7 +111,7 @@ class Peer:
     async def send(self, msg):
         msg.origin = self.protocol.addr
         msg.destination = self.protocol.peer
-        logging.info(f'Sending {msg.__class__.__name__} to {msg.destination}')
+        logging.info(f'Sending {msg.type()} to {msg.destination}')
         await self.msgqueue.put(msg)
 
 

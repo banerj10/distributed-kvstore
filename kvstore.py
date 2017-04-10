@@ -41,7 +41,7 @@ class KVStore:
 
     async def cmd_set(self, data):
         if len(data) != 2:
-            self.ui.output(f'Invalid: SET <key> <value>')
+            self.ui.output(f'Invalid! Usage: SET <key> <value>')
             return
 
         key = data[0]
@@ -74,7 +74,7 @@ class KVStore:
 
     async def cmd_get(self, data):
         if len(data) != 1:
-            self.ui.output(f'Invalid: GET <key>')
+            self.ui.output(f'Invalid! Usage: GET <key>')
             return
 
         key = data[0]
@@ -89,6 +89,7 @@ class KVStore:
                 AsyncNetwork.requests[msg.uid] = (event, None)
                 reqlist.append(msg.uid)
 
+        # TODO: add check for empty sendlist
         await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
         done, pending = await asyncio.wait(
             [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
@@ -110,11 +111,38 @@ class KVStore:
         for uid in reqlist:
             del AsyncNetwork.requests[uid]
 
+    async def cmd_owners(self, data):
+        if len(data) != 1:
+            self.ui.output(f'Invalid! Usage: OWNERS <key>')
+            return
+
+        self.ui.output('Don\'t know... :(')
+
+    async def cmd_list_local(self, data):
+        if len(data) != 0:
+            self.ui.output(f'Invalid! Usage: LIST_LOCAL')
+            return
+
+        self.ui.output('Don\'t know... :(')
+
+    async def cmd_batch(self, data):
+        if len(data) != 2:
+            self.ui.output(f'Invalid! Usage: BATCH <file1> <file2>')
+            return
+
+        self.ui.output('Don\'t know... :(')
+
+    ####### CUSTOM COMMANDS #######
 
     async def cmd_connected(self, data):
         connected = [ip for ip, peer in AsyncNetwork.nodes.items() if peer != None]
         self.ui.output('\n'.join(connected))
 
+    async def cmd_pending(self, data):
+        pending = len(AsyncNetwork.requests.keys())
+        self.ui.output(f'{pending} pending requests...')
+
+    ###############################
 
 logging.basicConfig(filename='app.log', level=logging.DEBUG)
 logging.info('=============================')

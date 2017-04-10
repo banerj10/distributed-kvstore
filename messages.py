@@ -6,6 +6,9 @@ class BaseMsg:
         self.origin = origin
         self.destination = destination
 
+    def type(self):
+        return self.__class__.__name__
+
 
 class TextMsg(BaseMsg):
     def __init__(self, msg, *args, **kwargs):
