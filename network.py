@@ -32,6 +32,8 @@ class AsyncNetwork:
             else:
                 AsyncNetwork.OWN_ID = id
 
+        logging.info(f'IDS: {AsyncNetwork.ids}')
+
     @staticmethod
     def placement(key):
         """
