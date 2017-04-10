@@ -46,8 +46,11 @@ class AsyncNetwork:
 
             AsyncNetwork.nodes[nodeip] = Peer(self.evloop, transport, proto)
 
-    def request_handler(self, data):
-        pass
+    def request_handler(self, msg):
+        if isinstance(msg, TextMsg):
+            logging.info(f'Got: {msg.msg}')
+        else:
+            logging.info('Dont recognize this msg')
 
     def close(self):
         self.server.close()

@@ -3,6 +3,7 @@ import logging
 
 from ui import UI
 from network import AsyncNetwork
+from messages import TextMsg
 
 class KVStore:
     def __init__(self, evloop, nodeslist):
@@ -37,7 +38,13 @@ class KVStore:
 
     async def cmd_set(self, data):
         self.ui.output(f'Will SET on {data}')
+        waitlist = []
+        for node, peer in AsyncNetwork.nodes.items():
+            if peer is not None:
+                waitlist.append(peer.send(TextMsg(data)))
 
+        await asyncio.wait(waitlist, loop=self.evloop)
+        self.ui.output('Sent!')
 
     async def cmd_connected(self, data):
         connected = [ip for ip, peer in AsyncNetwork.nodes.items() if peer != None]
@@ -57,6 +64,7 @@ evloop.set_debug(True)
 kvstore = KVStore(evloop, nodes)
 main_task = evloop.create_task(kvstore.main())
 
+pending = None
 try:
     evloop.run_forever()
 except KeyboardInterrupt:
