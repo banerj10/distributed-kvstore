@@ -149,7 +149,10 @@ class KVStore:
             self.ui.output(f'Invalid! Usage: LIST_LOCAL')
             return
 
-        keys = Store.hash_table.keys()
+        keys = []
+        keys.append(Store.hash_table.keys())
+        for replica in Store.replicas.keys():
+            keys.append(Store.replicas[replica].keys())
         for key in keys:
             self.ui.output(f'{key}')
         self.ui.output('END LIST')
