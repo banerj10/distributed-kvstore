@@ -40,12 +40,12 @@ class KVStore:
             self.ui.output('\nBYE!')
 
     async def cmd_set(self, data):
-        if len(data) != 2:
+        if len(data) < 2:
             self.ui.output(f'Invalid! Usage: SET <key> <value>')
             return
 
         key = data[0]
-        value = data[1]
+        value = ' '.join(data[1:])
 
         sendlist = []
         reqlist = []
