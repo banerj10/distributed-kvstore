@@ -107,38 +107,84 @@ class KVStore:
             return
 
         key = data[0]
-        sendlist = []
-        reqlist = []
-        for node, peer in AsyncNetwork.nodes.items():
-            if peer is not None:
-                msg = GetMsg(key)
-                event = asyncio.Event()
+        curr_id = AsyncNetwork.placement(key, return_id=True)
+        succ_id = (curr_id + 1) % 10
+        pred_id = 9 if curr_id == 0 else (curr_id - 1)
+        # TODO: expects succ_ip and pred_ip to exist in the Nodes dict
+        # get successor ID
+        while AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is None:
+            succ_id = (succ_id + 1) % 10
+        # get predecessor ID
+        while AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is None:
+            pred_id = 9 if pred_id == 0 else (pred_id - 1)
 
-                sendlist.append(peer.send(msg))
-                AsyncNetwork.requests[msg.uid] = (event, None)
-                reqlist.append(msg.uid)
+        try_ids = [curr_id, succ_id, pred_id]
+        msg = GetMsg(key)
 
-        # TODO: add check for empty sendlist
-        await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
-        done, pending = await asyncio.wait(
-            [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
-            loop=self.evloop, timeout=3
-        )
-
-        if len(done) >= 1:
-            values = [AsyncNetwork.requests[uid][1].value for uid in reqlist]
-            for val in values:
-                if val is not None:
-                    self.ui.output(f'Found: {val}')
-                    # clean up the requests
-                    for uid in reqlist:
-                        del AsyncNetwork.requests[uid]
+        for tryid in try_ids:
+            logging.info(f'Trying to GetMsg from ID: {tryid}')
+            if tryid == AsyncNetwork.OWN_ID:
+                # get key from self
+                value = self.network.handle_GetMsg(msg)
+                if value is not None:
+                    self.ui.output(f'Found: {value}')
                     return
-        # if we reach here, we could not find the key
+            else:
+                dest = AsyncNetwork.nodes[AsyncNetwork.ids[tryid]]
+                if dest is None: # succ or pred is not alive
+                    continue
+                event = asyncio.Event()
+                AsyncNetwork.requests[msg.uid] = (event, None)
+
+                try:
+                    await asyncio.wait_for(dest.send(msg), 2, loop=self.evloop)
+                    await asyncio.wait_for(event.wait(), 3, loop=self.evloop)
+                except asyncio.TimeoutError:
+                    logging.error('Failed to send GetMsg!')
+                else:
+                    value = AsyncNetwork.requests[msg.uid][1].value
+                    if value is not None:
+                        self.ui.output(f'Found: {value}')
+                        del AsyncNetwork.requests[msg.uid]
+                        return
+                finally:
+                    del AsyncNetwork.requests[msg.uid]
+
+        # none of the try_ids worked
         self.ui.output('Not found')
-        # clean up the requests
-        for uid in reqlist:
-            del AsyncNetwork.requests[uid]
+
+        # sendlist = []
+        # reqlist = []
+        # for node, peer in AsyncNetwork.nodes.items():
+        #     if peer is not None:
+        #         msg = GetMsg(key)
+        #         event = asyncio.Event()
+        #
+        #         sendlist.append(peer.send(msg))
+        #         AsyncNetwork.requests[msg.uid] = (event, None)
+        #         reqlist.append(msg.uid)
+        #
+        # # TODO: add check for empty sendlist
+        # await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
+        # done, pending = await asyncio.wait(
+        #     [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
+        #     loop=self.evloop, timeout=3
+        # )
+        #
+        # if len(done) >= 1:
+        #     values = [AsyncNetwork.requests[uid][1].value for uid in reqlist]
+        #     for val in values:
+        #         if val is not None:
+        #             self.ui.output(f'Found: {val}')
+        #             # clean up the requests
+        #             for uid in reqlist:
+        #                 del AsyncNetwork.requests[uid]
+        #             return
+        # # if we reach here, we could not find the key
+        # self.ui.output('Not found')
+        # # clean up the requests
+        # for uid in reqlist:
+        #     del AsyncNetwork.requests[uid]
 
     async def cmd_owners(self, data):
         if len(data) != 1:
