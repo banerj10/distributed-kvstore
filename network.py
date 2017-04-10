@@ -5,16 +5,13 @@ import socket
 class AsyncNetwork:
     PORT = 13337
 
+    nodes = {}
+
     def __init__(self, evloop, nodeslist):
         self.evloop = evloop
         self.nodeslist = nodeslist
 
-        # dict of nodes connected to
-        self.alive = {}
-
     async def create_server(self):
-        # proto = TCPProtocol(self.evloop)
-
         self.server = await self.evloop.create_server(
             lambda: TCPProtocol(self.evloop), port=AsyncNetwork.PORT,
             family=socket.AF_INET, reuse_address=True, reuse_port=True
@@ -23,6 +20,7 @@ class AsyncNetwork:
 
     def close(self):
         self.server.close()
+
 
 class Node:
     def __init__(self):
@@ -34,16 +32,17 @@ class TCPProtocol(asyncio.Protocol):
         self.evloop = evloop
         logging.info('Created protocol!')
 
-    # def __call__(self):
-    #     return self
-
     def connection_made(self, transport):
         self.transport = transport
-        self.peer = self.transport.get_extra_info('peername')
+        self.peer = self.transport.get_extra_info('peername')[0]
         logging.info('Got connection from {}'.format(str(self.peer)))
+
+        AsyncNetwork.nodes[self.peer] = self.transport
 
     def connection_lost(self, exc):
         logging.info('Connection lost with {}'.format(str(self.peer)))
+        del AsyncNetwork[self.peer]
+
         super().connection_lost(exc)
 
     def data_received(self, data):

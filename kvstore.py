@@ -14,14 +14,15 @@ class KVStore:
 
     async def main(self):
         await self.network.create_server()
+        # await self.
 
         try:
             while True:
                 command = await self.ui.input()
                 self.ui.output('Got: ' + command)
+
                 if command == 'connected':
-                    peers = [s.getpeername() for s in self.network.server.sockets]
-                    self.ui.output(' '.join(peers))
+                    self.ui.output(' '.join(AsyncNetwork.nodes.keys()))
 
         except asyncio.CancelledError:
             self.network.close()
