@@ -20,7 +20,8 @@ class KVStore:
                 command = await self.ui.input()
                 self.ui.output('Got: ' + command)
                 if command == 'connected':
-                    self.ui.output(' '.join(self.network.server.sockets.getpeername()))
+                    peers = [s.getpeername() for s in self.network.server.sockets]
+                    self.ui.output(' '.join(peers))
 
         except asyncio.CancelledError:
             self.network.close()
