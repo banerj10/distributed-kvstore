@@ -203,12 +203,19 @@ class KVStore:
         curr_id = AsyncNetwork.placement(key, return_id=True)
         succ_id = (curr_id + 1) % 10
         pred_id = 9 if curr_id == 0 else (curr_id - 1)
-        # TODO: expects succ_ip and pred_ip to exist in the Nodes dict
         # get successor ID
-        while AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is None:
+        while True:
+            if succ_id == AsyncNetwork.OWN_ID:
+                break
+            if AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is not None:
+                break
             succ_id = (succ_id + 1) % 10
         # get predecessor ID
-        while AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is None:
+        while True:
+            if pred_id == AsyncNetwork.OWN_ID:
+                break
+            if AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is not None:
+                break
             pred_id = 9 if pred_id == 0 else (pred_id - 1)
         self.ui.output(f'{curr_id + 1:02d} {succ_id + 1:02d} {pred_id + 1:02d}')
 
