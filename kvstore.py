@@ -155,7 +155,8 @@ class KVStore:
                         del AsyncNetwork.requests[msg.uid]
                         return
                 finally:
-                    del AsyncNetwork.requests[msg.uid]
+                    if msg.uid in AsyncNetwork.requests:
+                        del AsyncNetwork.requests[msg.uid]
 
         # none of the try_ids worked
         self.ui.output('Not found')
