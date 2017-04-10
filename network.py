@@ -188,8 +188,9 @@ class Peer:
         self.evloop.create_task(self.start())
 
     async def start(self):
-        while not self.transport.is_closing():
+        while self.protocol.is_alive:
             msg = await self.msgqueue.get()
+            logging.debug('Sending msg from the queue...')
             if not msg.destination:
                 logging.error('!!!!! NO DESTINATION !!!!!')
                 continue
@@ -208,10 +209,12 @@ class TCPProtocol(asyncio.Protocol):
         self.evloop = evloop
         self.req_handler = req_handler
         self.addr = socket.gethostbyname(socket.gethostname())
+        self.is_alive = False
         logging.info('Created protocol!')
 
     def connection_made(self, transport):
         self.transport = transport
+        self.is_alive = True
         self.peer = self.transport.get_extra_info('peername')[0]
         logging.info(f'Got connection from {str(self.peer)}')
 
@@ -219,6 +222,7 @@ class TCPProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         logging.info(f'Connection lost with {str(self.peer)}')
+        self.is_alive = False
         AsyncNetwork.nodes[self.peer] = None
 
         super().connection_lost(exc)
