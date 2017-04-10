@@ -1,4 +1,5 @@
 import asyncio
+from concurrent import futures
 import logging
 import socket
 
@@ -45,21 +46,70 @@ class KVStore:
 
         key = data[0]
         value = data[1]
-        self.ui.output(f'Will SET {key} = {value}')
 
         sendlist = []
-        waitlist = []
+        reqlist = []
         for node, peer in AsyncNetwork.nodes.items():
             if peer is not None:
                 msg = SetMsg(key, value)
                 event = asyncio.Event()
 
                 sendlist.append(peer.send(msg))
-                AsyncNetwork.requests[msg.uid] = event
-                waitlist.append(event.wait())
+                AsyncNetwork.requests[msg.uid] = (event, None)
+                reqlist.append(msg.uid)
 
         await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
-        await asyncio.wait(waitlist, loop=self.evloop, timeout=3)
+        done, pending = await asyncio.wait(
+            [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
+            loop=self.evloop, timeout=3
+        )
+
+        if len(done) >= 1:
+            self.ui.output('SET OK')
+        else:
+            self.ui.output('SET FAILED')
+        # clean up the requests
+        for uid in reqlist:
+            del AsyncNetwork.requests[uid]
+
+    async def cmd_get(self, data):
+        if len(data) != 1:
+            self.ui.output(f'Invalid: GET <key>')
+            return
+
+        key = data[0]
+        sendlist = []
+        reqlist = []
+        for node, peer in AsyncNetwork.nodes.items():
+            if peer is not None:
+                msg = GetMsg(key)
+                event = asyncio.Event()
+
+                sendlist.append(peer.send(msg))
+                AsyncNetwork.requests[msg.uid] = (event, None)
+                reqlist.append(msg.uid)
+
+        await asyncio.wait(sendlist, loop=self.evloop, timeout=3)
+        done, pending = await asyncio.wait(
+            [AsyncNetwork.requests[uid][0].wait() for uid in reqlist],
+            loop=self.evloop, timeout=3
+        )
+
+        if len(done) >= 1:
+            values = [AsyncNetwork.requests[uid][1].value for uid in reqlist]
+            for val in values:
+                if val is not None:
+                    self.ui.output(f'Found: {val}')
+                    # clean up the requests
+                    for uid in reqlist:
+                        del AsyncNetwork.requests[uid]
+                    return
+        # if we reach here, we could not find the key
+        self.ui.output('Not found')
+        # clean up the requests
+        for uid in reqlist:
+            del AsyncNetwork.requests[uid]
+
 
     async def cmd_connected(self, data):
         connected = [ip for ip, peer in AsyncNetwork.nodes.items() if peer != None]

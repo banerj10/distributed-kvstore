@@ -12,7 +12,7 @@ class AsyncNetwork:
     # ip_addr -> Peer (has transport and protocol objs inside)
     nodes = {}
 
-    # uuid4 -> Event
+    # uuid4 -> (Event, Response msg)
     requests = {}
 
     def __init__(self, evloop, nodeslist):
@@ -68,8 +68,23 @@ class AsyncNetwork:
 
     def handle_SetMsgResponse(self, msg):
         orig_uid = msg.orig_uid
-        AsyncNetwork.requests[orig_uid].set()
-        del AsyncNetwork.requests[orig_uid]
+        event, _ = AsyncNetwork.requests[orig_uid]
+        event.set()
+        response = msg
+        AsyncNetwork.requests[orig_uid] = event, response
+
+    def handle_GetMsg(self, msg):
+        value = Store.hash_table[msg.key]
+        respondmsg = GetMsgResponse(msg.uid, value)
+        asyncio.ensure_future(
+            AsyncNetwork.nodes[msg.origin].send(respondmsg), loop=self.evloop)
+
+    def handle_GetMsgResponse(self, msg):
+        orig_uid = msg.orig_uid
+        event, _ = AsyncNetwork.requests[orig_uid]
+        event.set()
+        response = msg
+        AsyncNetwork.requests[orig_uid] = event, response
 
     def close(self):
         self.server.close()
@@ -96,6 +111,7 @@ class Peer:
     async def send(self, msg):
         msg.origin = self.protocol.addr
         msg.destination = self.protocol.peer
+        logging.info(f'Sending {msg.__class__.__name__} to {msg.destination}')
         await self.msgqueue.put(msg)
 
 
