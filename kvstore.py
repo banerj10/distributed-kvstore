@@ -1,7 +1,6 @@
 import asyncio
 from concurrent import futures
 import logging
-import socket
 
 from messages import *
 from network import AsyncNetwork
@@ -54,6 +53,7 @@ class KVStore:
         if dest is None:
             logging.info('Storing in self!')
             self.network.handle_SetMsg(msg)
+            self.ui.output('SET OK')
         else:
             # dest is a Peer object
             event = asyncio.Event()
@@ -140,14 +140,19 @@ class KVStore:
             self.ui.output(f'Invalid! Usage: OWNERS <key>')
             return
 
-        self.ui.output('Don\'t know... :(')
+        key = data[0]
+        dest = AsyncNetwork.placement(key, return_id=True) + 1
+        self.ui.output(f'{dest:02d}')
 
     async def cmd_list_local(self, data):
         if len(data) != 0:
             self.ui.output(f'Invalid! Usage: LIST_LOCAL')
             return
 
-        self.ui.output('Don\'t know... :(')
+        keys = Store.hash_table.keys()
+        for key in keys:
+            self.ui.output(f'{key}')
+        self.ui.output('END LIST')
 
     async def cmd_batch(self, data):
         if len(data) != 2:

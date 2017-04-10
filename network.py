@@ -36,27 +36,33 @@ class AsyncNetwork:
         logging.info(f'IDS: {AsyncNetwork.ids}')
 
     @staticmethod
-    def placement(key):
+    def placement(key, return_id=False):
         """
-        Places the given key in the cluster
-        :param key: 
-        :return: the Peer object of the node to place this key in, or
-                 None if the key should be stored in self
+        Places the given key in the cluster and returns placement
         """
         if isinstance(key, str):
             key = Store.hash(key)
 
         orig = key
         if key == AsyncNetwork.OWN_ID:
-            return None
+            if return_id:
+                return AsyncNetwork.OWN_ID
+            else:
+                return None
 
         while AsyncNetwork.nodes[AsyncNetwork.ids[key]] is None:
             key += 1
             key = key % 10
             if key == orig or key == AsyncNetwork.OWN_ID:
-                return None
+                if return_id:
+                    return AsyncNetwork.OWN_ID
+                else:
+                    return None
 
-        return AsyncNetwork.nodes[AsyncNetwork.ids[key]]
+        if return_id:
+            return key
+        else:
+            return AsyncNetwork.nodes[AsyncNetwork.ids[key]]
 
     async def create_server(self):
         self.server = await self.evloop.create_server(
