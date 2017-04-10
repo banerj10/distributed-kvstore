@@ -97,9 +97,13 @@ class AsyncNetwork:
     def handle_SetMsg(self, msg):
         Store.hash_table[msg.key] = msg.value
         respondmsg = SetMsgResponse(msg.uid)
-        # TODO: don't do anything if no msg.origin
-        asyncio.ensure_future(
-            AsyncNetwork.nodes[msg.origin].send(respondmsg), loop=self.evloop)
+
+        # respond only if msg has an origin
+        if msg.origin:
+            asyncio.ensure_future(
+                AsyncNetwork.nodes[msg.origin].send(respondmsg),
+                loop=self.evloop
+            )
 
     def handle_SetMsgResponse(self, msg):
         orig_uid = msg.orig_uid
