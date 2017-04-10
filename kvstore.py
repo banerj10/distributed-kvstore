@@ -38,6 +38,7 @@ class KVStore:
     async def cmd_set(self, data):
         self.ui.output(f'Will SET on {data}')
 
+
     async def cmd_connected(self, data):
         connected = [ip for ip, peer in AsyncNetwork.nodes.items() if peer != None]
         self.ui.output('\n'.join(connected))
@@ -59,7 +60,10 @@ main_task = evloop.create_task(kvstore.main())
 try:
     evloop.run_forever()
 except KeyboardInterrupt:
-    main_task.cancel()
-    evloop.run_until_complete(main_task)
+    # main_task.cancel()
+    evloop.stop()
+    pending = asyncio.Task.all_tasks()
+    # evloop.run_until_complete(main_task)
+    evloop.run_until_complete(asyncio.gather(*pending))
 finally:
     evloop.close()
