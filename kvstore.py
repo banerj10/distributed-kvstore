@@ -63,6 +63,8 @@ except KeyboardInterrupt:
     # main_task.cancel()
     evloop.stop()
     pending = asyncio.Task.all_tasks()
+    for task in pending:
+        task.cancel()
     # evloop.run_until_complete(main_task)
     evloop.run_until_complete(asyncio.gather(*pending))
 finally:
