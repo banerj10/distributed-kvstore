@@ -62,10 +62,9 @@ class AsyncNetwork:
 
     def handle_SetMsg(self, msg):
         Store.hash_table[msg.key] = msg.value
-        respondto = msg.destination
         respondmsg = SetMsgResponse(msg.uid)
         asyncio.ensure_future(
-            AsyncNetwork.nodes[respondto].send(respondmsg), loop=self.evloop)
+            AsyncNetwork.nodes[msg.origin].send(respondmsg), loop=self.evloop)
 
     def handle_SetMsgResponse(self, msg):
         orig_uid = msg.orig_uid
@@ -92,10 +91,15 @@ class Peer:
             if not destination:
                 logging.error('!!!!! NO DESTINATION !!!!!')
                 continue
+            # switch destination and origin for the receiver's perspective
+            temp = msg.destination
+            msg.destination = msg.origin
+            msg.origin = temp
             pickled = pickle.dumps(msg, pickle.HIGHEST_PROTOCOL)
             self.transport.write(pickled)
 
     async def send(self, msg):
+        msg.origin = self.protocol.addr
         msg.destination = self.protocol.peer
         await self.msgqueue.put(msg)
 
@@ -104,6 +108,7 @@ class TCPProtocol(asyncio.Protocol):
     def __init__(self, evloop, req_handler):
         self.evloop = evloop
         self.req_handler = req_handler
+        self.addr = socket.gethostbyname(socket.gethostname())
         logging.info('Created protocol!')
 
     def connection_made(self, transport):
