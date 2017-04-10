@@ -16,8 +16,8 @@ class KVStore:
         self.ui.output('=============================')
         self.ui.output('==== Distributed KVStore ====')
         self.ui.output('=============================')
-        self.ui.output(f'Node ID: {AsyncNetwork.OWN_ID}')
-        self.ui.output(f'Node IP ADDR: {AsyncNetwork.OWN_IP}')
+        self.ui.output(f'ID: {AsyncNetwork.OWN_ID + 1:02d}')
+        self.ui.output(f'IP ADDR: {AsyncNetwork.OWN_IP}')
 
     async def main(self):
         await self.network.create_server()
