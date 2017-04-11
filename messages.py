@@ -9,6 +9,9 @@ class BaseMsg:
     def type(self):
         return self.__class__.__name__
 
+    def __str__(self):
+        return str(vars(self))
+
 
 class ReplicationMsg(BaseMsg):
     def __init__(self, data, *args, **kwargs):
@@ -54,3 +57,11 @@ class GetOwnersResponse(BaseMsg):
         self.orig_uid = orig_uid
         self.key = key
         self.is_owner = is_owner
+
+
+class StabilizationMsg(BaseMsg):
+    def __init__(self, data, designation, rename=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.data = data
+        self.designation = designation
+        self.rename = rename

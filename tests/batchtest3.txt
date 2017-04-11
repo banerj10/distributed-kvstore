@@ -1,0 +1,12 @@
+TIME
+GET greeting
+GET goodbye
+GET google
+GET yahoo
+GET aol
+GET ping
+GET UIUC
+GET ECE
+GET CS
+GET Python
+TIME

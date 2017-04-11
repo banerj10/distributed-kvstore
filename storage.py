@@ -2,6 +2,7 @@ from hashlib import md5
 
 class Store:
     hash_table = {}
+    # peer_id -> dict(key -> value)
     replicas = {}
 
     @staticmethod

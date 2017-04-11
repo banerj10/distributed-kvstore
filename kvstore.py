@@ -1,6 +1,6 @@
 import asyncio
-from concurrent import futures
 import logging
+import time
 
 from messages import *
 from network import AsyncNetwork
@@ -305,6 +305,9 @@ class KVStore:
         pending = len(AsyncNetwork.requests.keys())
         self.ui.output(f'{pending} pending requests...')
 
+    async def cmd_time(self, data):
+        self.ui.output(str(time.time()))
+
     ###############################
 
 logging.basicConfig(filename='app.log', level=logging.DEBUG)
@@ -316,7 +319,7 @@ with open('nodeslist.txt', 'r') as f:
     nodes = [line.split() for line in f.readlines()]
 
 evloop = asyncio.get_event_loop()
-evloop.set_debug(False)
+evloop.set_debug(True)
 kvstore = KVStore(evloop, nodes)
 main_task = evloop.create_task(kvstore.main())
 
