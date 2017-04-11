@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import logging
 import pickle
 import socket
@@ -197,6 +198,19 @@ class AsyncNetwork:
             Store.replicas[orig_id] = dict()
         Store.replicas[orig_id].update(msg.data)
 
+    def handle_StabilizationMsg(self, msg):
+        origin_id = AsyncNetwork.ips[msg.origin]
+
+        if msg.rename:
+            Store.replicas[origin_id] = copy.deepcopy(
+                Store.replicas[msg.designation]
+            )
+            Store.replicas[origin_id].update(msg.data)
+        else:
+            if msg.designation not in Store.replicas:
+                Store.replicas[msg.designation] = dict()
+            Store.replicas[msg.designation].update(msg.data)
+
     def close(self):
         self.server.close()
 
@@ -226,6 +240,96 @@ class Peer:
         logging.info(f'Sending {msg.type()} to {msg.destination}')
         await self.msgqueue.put(msg)
 
+    def failure_predecessor(self, peer_ip, old_topology, failed_succ_id):
+        peer_id = AsyncNetwork.ips[peer_ip]
+
+        # find predecessor of peer_id
+        failed_pred_id = 9 if peer_id == 0 else (peer_id - 1)
+        while failed_pred_id != peer_id:
+            if old_topology[AsyncNetwork.ids[failed_pred_id]] is not None:
+                break
+            failed_pred_id = 9 if failed_pred_id == 0 else (failed_pred_id - 1)
+
+        if failed_pred_id != AsyncNetwork.OWN_ID:
+            # I do not do anything if I'm not the predecessor of the failed peer
+            logging.info(f'I am NOT predecessor of peer {peer_id+1:02d}')
+            return
+
+        stmsg1 = StabilizationMsg(copy.deepcopy(Store.hash_table),
+                                  AsyncNetwork.OWN_ID)
+        # TODO: destination might have failed
+        self.evloop.create_task(
+            AsyncNetwork.nodes[AsyncNetwork.ids[failed_succ_id]].send(stmsg1)
+        )
+
+    async def handle_failure(self, peer_ip, old_topology):
+        peer_id = AsyncNetwork.ips[peer_ip]
+
+        # find successor of peer_id
+        failed_succ_id = (peer_id + 1) % 10
+        while failed_succ_id != peer_id:
+            if old_topology[AsyncNetwork.ids[failed_succ_id]] is not None:
+                break
+            failed_succ_id = (failed_succ_id + 1) % 10
+
+        if failed_succ_id != AsyncNetwork.OWN_ID:
+            # I do not do anything if I'm not the successor of the failed peer
+            logging.info(f'I am NOT successor of peer {peer_id+1:02d}')
+            self.failure_predecessor(peer_ip, old_topology, failed_succ_id)
+            return
+
+        logging.info(f'ALERT! Need to handle peer {peer_id+1:02d}\'s failure')
+
+        """
+        X = peer_id
+        1. Send my data to predecessor. Predecessor will update R(peer_id) to
+           R(self), and do R(self) += my data
+        2. Predecessor will respond with his own data, I will create
+           R(predecessor)
+        3. I will merge: my data += R(X)
+        4. Send R(X) to my successor. Successor updates R(me) with R(X)
+        5. Delete R(X)
+        """
+
+        pred_id = 9 if peer_id == 0 else (peer_id - 1)
+        while pred_id != peer_id:
+            if old_topology[AsyncNetwork.ids[pred_id]] is not None:
+                break
+            pred_id = 9 if pred_id == 0 else (pred_id - 1)
+
+        # STEP 1
+        stmsg1 = StabilizationMsg(copy.deepcopy(Store.hash_table), peer_id,
+                                  rename=True)
+        # TODO: destination might have failed
+        self.evloop.create_task(
+            AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]].send(stmsg1)
+        )
+
+        # STEP 2 - Is a response
+
+        # STEP 3
+        Store.hash_table.update(Store.replicas[peer_id])
+
+        succ_id = (AsyncNetwork.OWN_ID + 1) % 10
+        # get successor ID
+        while True:
+            if succ_id == AsyncNetwork.OWN_ID:
+                break
+            if AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]] is not None:
+                break
+            succ_id = (succ_id + 1) % 10
+
+        # STEP 4
+        stmsg2 = StabilizationMsg(copy.deepcopy(Store.replicas[peer_id]),
+                                  AsyncNetwork.OWN_ID)
+        # TODO: destination might have failed
+        self.evloop.create_task(
+            AsyncNetwork.nodes[AsyncNetwork.ids[succ_id]].send(stmsg2)
+        )
+
+        # STEP 5
+        del Store.replicas[peer_id]
+
 
 class TCPProtocol(asyncio.Protocol):
     def __init__(self, evloop, req_handler):
@@ -246,6 +350,11 @@ class TCPProtocol(asyncio.Protocol):
     def connection_lost(self, exc):
         logging.info(f'Connection lost with {str(self.peer)}')
         self.is_alive = False
+        self.evloop.create_task(
+            AsyncNetwork.nodes[self.peer].handle_failure(
+                self.peer, copy.copy(AsyncNetwork.nodes)
+            )
+        )
         AsyncNetwork.nodes[self.peer] = None
 
         super().connection_lost(exc)

@@ -54,3 +54,11 @@ class GetOwnersResponse(BaseMsg):
         self.orig_uid = orig_uid
         self.key = key
         self.is_owner = is_owner
+
+
+class StabilizationMsg(BaseMsg):
+    def __init__(self, data, designation, rename=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.data = data
+        self.designation = designation
+        self.rename = rename
