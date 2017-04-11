@@ -129,6 +129,8 @@ class AsyncNetwork:
         while AsyncNetwork.nodes[AsyncNetwork.ids[pred_id]] is None:
             pred_id = 9 if pred_id == 0 else (pred_id - 1)
 
+        logging.debug(f'handle_SendMsg: {curr_id} {succ_id} {pred_id}')
+
         # respond only if msg has an origin
         if msg.origin:
             self.evloop.create_task(
