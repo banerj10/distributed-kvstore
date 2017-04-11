@@ -9,6 +9,9 @@ class BaseMsg:
     def type(self):
         return self.__class__.__name__
 
+    def __str__(self):
+        return str(vars(self))
+
 
 class ReplicationMsg(BaseMsg):
     def __init__(self, data, *args, **kwargs):

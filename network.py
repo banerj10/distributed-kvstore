@@ -229,7 +229,9 @@ class Peer:
     async def start(self):
         while self.protocol.is_alive:
             msg = await self.msgqueue.get()
-            logging.debug('Sending msg from the queue...')
+            logging.debug('Sending msg from the queue:')
+            logging.debug(str(msg))
+            logging.debug('\n')
             if not msg.destination:
                 logging.error('!!!!! NO DESTINATION !!!!!')
                 continue
