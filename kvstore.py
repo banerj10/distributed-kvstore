@@ -1,6 +1,6 @@
 import asyncio
-from concurrent import futures
 import logging
+import time
 
 from messages import *
 from network import AsyncNetwork
@@ -304,6 +304,9 @@ class KVStore:
     async def cmd_pending(self, data):
         pending = len(AsyncNetwork.requests.keys())
         self.ui.output(f'{pending} pending requests...')
+
+    async def cmd_time(self, data):
+        self.ui.output(str(time.time()))
 
     ###############################
 

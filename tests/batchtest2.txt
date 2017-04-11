@@ -1,0 +1,12 @@
+TIME
+SET greeting Hello there!
+SET goodbye Adios!
+SET google google.com
+SET yahoo yahoo.com
+SET aol aol.com
+SET ping ping-ack
+SET UIUC illinois.edu
+SET ECE Electrical and Computer Engineering
+SET CS Computer Science
+SET Python www.python.org
+TIME
