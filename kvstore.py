@@ -316,7 +316,7 @@ with open('nodeslist.txt', 'r') as f:
     nodes = [line.split() for line in f.readlines()]
 
 evloop = asyncio.get_event_loop()
-evloop.set_debug(False)
+evloop.set_debug(True)
 kvstore = KVStore(evloop, nodes)
 main_task = evloop.create_task(kvstore.main())
 
