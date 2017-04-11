@@ -271,7 +271,29 @@ class KVStore:
             self.ui.output(f'Invalid! Usage: BATCH <file1> <file2>')
             return
 
-        self.ui.output('Don\'t know... :(')
+        infile = open(data[0], 'r')
+        outfile = open(data[1], 'w')
+
+        self.ui.set_output_to_return(True, outfile=outfile)
+
+        for line in infile:
+            if line.strip() == '':
+                continue
+
+            cmd = line.split()[0]
+            data = line.split()[1:]
+
+            cmd_handler = getattr(self, f'cmd_{cmd.lower()}', None)
+            if cmd_handler is None:
+                self.ui.output(f'Unknown command "{cmd}"...')
+            else:
+                await cmd_handler(data)
+                await asyncio.sleep(0.2, loop=self.evloop)
+
+        infile.close()
+        outfile.close()
+
+        self.ui.set_output_to_return(False)
 
     ####### CUSTOM COMMANDS #######
 
