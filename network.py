@@ -250,6 +250,8 @@ class Peer:
         # find predecessor of peer_id
         failed_pred_id = 9 if peer_id == 0 else (peer_id - 1)
         while failed_pred_id != peer_id:
+            if failed_pred_id == AsyncNetwork.OWN_ID:
+                break
             if old_topology[AsyncNetwork.ids[failed_pred_id]] is not None:
                 break
             failed_pred_id = 9 if failed_pred_id == 0 else (failed_pred_id - 1)
@@ -272,6 +274,8 @@ class Peer:
         # find successor of peer_id
         failed_succ_id = (peer_id + 1) % 10
         while failed_succ_id != peer_id:
+            if failed_succ_id == AsyncNetwork.OWN_ID:
+                break
             if old_topology[AsyncNetwork.ids[failed_succ_id]] is not None:
                 break
             failed_succ_id = (failed_succ_id + 1) % 10
