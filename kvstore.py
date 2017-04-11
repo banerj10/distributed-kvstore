@@ -262,7 +262,7 @@ class KVStore:
         keys.extend(Store.hash_table.keys())
         for replica in Store.replicas.keys():
             keys.extend(Store.replicas[replica].keys())
-        for key in keys:
+        for key in sorted(keys):
             self.ui.output(f'{key}')
         self.ui.output('END LIST')
 
