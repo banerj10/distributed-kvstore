@@ -7,6 +7,6 @@ GET aol
 GET ping
 GET UIUC
 GET ECE
-GET CS Computer
+GET CS
 GET Python
 TIME
