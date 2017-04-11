@@ -1,0 +1,10 @@
+LIST_LOCAL
+SET greeting Hello there!
+SET goodbye Adios!
+GET greeting
+LIST_LOCAL
+OWNERS goodbye
+SET x 501
+SET x 1001
+GET x
+LIST_LOCAL
