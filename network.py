@@ -315,8 +315,8 @@ class Peer:
                 hash_copy[key] = value
 
         # TODO: IMPORTANT: Uncomment this code
-        # for key in hash_copy.keys():
-        #     Store.hash_table.pop(key, None)
+        for key in hash_copy.keys():
+            Store.hash_table.pop(key, None)
         stmsg2 = StabilizationMsg(hash_copy, peer_id)
         self.evloop.create_task(
             AsyncNetwork.nodes[AsyncNetwork.ids[peer_id]].send(stmsg2)
